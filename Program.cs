@@ -35,6 +35,8 @@ class Win : Window
     TextBlock st;
     Border head;
     readonly RotateTransform rt = new(0, .5, .5);
+    readonly SkewTransform tilt = new();
+    readonly RotateTransform headRotate = new();
 
     static Brush Br(byte a, byte b, byte d) => new SolidColorBrush(Color.FromRgb(a, b, d));
     static readonly Brush Red = Br(0xE1, 0x1D, 0x2E), Dk = Br(0x5A, 0x08, 0x10);
@@ -96,14 +98,41 @@ class Win : Window
         var hs = new StackPanel();
         hs.Children.Add(new TextBlock { Text = "M1RXRec", FontSize = 44, FontWeight = FontWeights.Black, Foreground = Brushes.White });
         hs.Children.Add(new TextBlock { Text = "Low-overhead GPU screen recorder  •  Replay  •  Overlay", Foreground = Brushes.White, Opacity = .85 });
-        head = new Border { Background = hb, CornerRadius = new CornerRadius(20), Padding = new Thickness(26, 18, 26, 18), Margin = new Thickness(16, 16, 16, 6), Child = hs, Projection = new System.Windows.Media.Media3D.PlaneProjection() };
-        head.MouseMove += (s, e) =>
+        head = new Border
+       {
+        Background = hb,
+        CornerRadius = new CornerRadius(20),
+        Padding = new Thickness(26, 18, 26, 18),
+        Margin = new Thickness(16, 16, 16, 6),
+        Child = hs,
+        RenderTransformOrigin = new Point(.5, .5),
+        RenderTransform = new TransformGroup
         {
-            var p = e.GetPosition(head); var pp = (System.Windows.Media.Media3D.PlaneProjection)head.Projection;
-            pp.RotationY = (p.X / head.ActualWidth - .5) * 12; pp.RotationX = -(p.Y / head.ActualHeight - .5) * 12;
+        Children =
+        {
+            headRotate,
+            tilt
+        }
+        }
         };
-        head.MouseLeave += (s, e) => { var pp = (System.Windows.Media.Media3D.PlaneProjection)head.Projection; pp.RotationX = 0; pp.RotationY = 0; };
+        head.MouseMove += (s, e) =>
+{
+    var p = e.GetPosition(head);
 
+    double x = p.X / Math.Max(1, head.ActualWidth) - .5;
+    double y = p.Y / Math.Max(1, head.ActualHeight) - .5;
+
+    tilt.AngleX = y * 8;
+    tilt.AngleY = x * 8;
+    headRotate.Angle = x * 3;
+};
+
+head.MouseLeave += (s, e) =>
+{
+    tilt.AngleX = 0;
+    tilt.AngleY = 0;
+    headRotate.Angle = 0;
+};
         // quality
         cp = Cb(PS.Select(x => x.n), Array.FindIndex(PS, x => x.w == c.W && x.h == c.H && x.f == c.Fps && x.b == c.Mbps) is var i && i >= 0 ? i : PS.Length - 1);
         tw = Tb(c.W + ""); th = Tb(c.H + ""); tf = Tb(c.Fps + ""); tb = Tb(c.Mbps + "");
